@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tic Tac Toe vs Smart Computer — with Sound</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;500;700&display=swap');
+    :root{
+      --glass: rgba(255,255,255,0.12);
+      --accent1: #06b6d4;
+      --accent2: #8b5cf6;
+      --accent3: #f43f5e;
+      --muted: rgba(255,255,255,0.8);
+    }
+    *{box-sizing:border-box}
+    body {
+      font-family: 'Poppins', sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      margin: 0;
+      background: radial-gradient(circle at 10% 20%, #0ea5e9 0%, #7c3aed 35%, #ef4444 100%);
+      color: var(--muted);
+      overflow: hidden;
+    }
+    h1 {
+      margin-bottom: 14px;
+      font-weight:700;
+      text-shadow: 0 6px 18px rgba(0,0,0,0.35);
+      letter-spacing: 0.6px;
+      color: white;
+    }
+    .ui {
+      background: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.03));
+      border-radius: 20px;
+      padding: 18px;
+      box-shadow: 0 8px 30px rgba(2,6,23,0.5);
+      display: flex;
+      gap: 16px;
+      align-items: center;
+    }
+    .left {
+      display:flex;flex-direction:column;align-items:center;gap:12px;padding:12px;
+    }
+    .board {
+      display: grid;
+      grid-template-columns: repeat(3, 120px);
+      grid-template-rows: repeat(3, 120px);
+      gap: 12px;
+      perspective: 1000px;
+      padding: 12px;
+      background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(0,0,0,0.02));
+      border-radius: 16px;
+    }
+    .cell {
+      width: 120px;
+      height: 120px;
+      background: linear-gradient(135deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02));
+      border-radius: 18px;
+      font-size: 3rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      box-shadow: 0 8px 18px rgba(2,6,23,0.35), inset 0 -6px 12px rgba(0,0,0,0.06);
+      transition: transform 260ms cubic-bezier(.2,.9,.3,1), background 260ms ease, box-shadow 260ms ease;
+      user-select: none;
+      color: #0f172a;
+      font-weight:700;
+    }
+    .cell:hover { transform: translateY(-6px) rotateX(6deg); }
+    .cell.x{ color: #0b84ff; }
+    .cell.o{ color: #ef4444; }
+
+    .cell.win {
+      box-shadow: 0 16px 40px rgba(0,0,0,0.45), 0 0 28px rgba(255,255,255,0.06) inset;
+      transform: scale(1.06) rotateZ(2deg);
+      background: linear-gradient(135deg, rgba(255,255,255,0.12), rgba(255,255,255,0.02));
+    }
+
+    .right {
+      display:flex;flex-direction:column;gap:10px;padding:10px;align-items:flex-start;
+    }
+    .message {
+      margin-top: 8px;
+      font-size: 1.05rem;
+      color: #fff;
+      min-height: 28px;
+      text-shadow: 0 4px 12px rgba(0,0,0,0.35);
+    }
+    .controls{display:flex;gap:8px;align-items:center}
+    .btn{
+      padding:10px 14px;border-radius:999px;border:none;cursor:pointer;font-weight:600;
+      box-shadow: 0 6px 18px rgba(2,6,23,0.35);
+      transition: transform 200ms ease, box-shadow 200ms ease;
+    }
+    .btn:active{transform:translateY(2px)}
+    .primary{background:linear-gradient(90deg,var(--accent1),var(--accent2));color:white}
+    .ghost{background:transparent;border:1px solid rgba(255,255,255,0.12);color:white;padding:8px 12px;border-radius:10px}
+
+    .soundToggle{display:flex;gap:8px;align-items:center}
+    .score{font-size:0.9rem;color:rgba(255,255,255,0.9)}
+
+    /* small responsive */
+    @media (max-width:520px){
+      .board{grid-template-columns:repeat(3,86px);grid-template-rows:repeat(3,86px);gap:8px}
+      .cell{width:86px;height:86px;font-size:2rem;border-radius:12px}
+    }
+  </style>
+</head>
+<body>
+  <h1>🎮 Tic Tac Toe — Smart Computer + Sound</h1>
+  <div class="ui" role="region" aria-label="game UI">
+    <div class="left">
+      <div id="board" class="board" aria-live="polite"></div>
+      <div class="message" id="message">Your turn — you are <strong>X</strong></div>
+    </div>
+
+    <div class="right">
+      <div class="controls">
+        <button id="resetBtn" class="btn primary">Restart</button>
+        <button id="firstBtn" class="btn ghost">Computer First</button>
+      </div>
+
+      <div class="soundToggle">
+        <label class="score">Sound:</label>
+        <button id="soundOn" class="btn ghost">On</button>
+        <button id="soundOff" class="btn ghost">Off</button>
+      </div>
+
+      <div class="score" id="score">You: 0 · Computer: 0 · Ties: 0</div>
+    </div>
+  </div>
+
+  <script>
+    // Game state
+    const boardEl = document.getElementById('board');
+    const messageEl = document.getElementById('message');
+    const resetBtn = document.getElementById('resetBtn');
+    const firstBtn = document.getElementById('firstBtn');
+    const soundOnBtn = document.getElementById('soundOn');
+    const soundOffBtn = document.getElementById('soundOff');
+    const scoreEl = document.getElementById('score');
+
+    let board = Array(9).fill('');
+    let gameOver = false;
+    let playerTurn = true; // true -> X
+    let scores = { X: 0, O: 0, Tie: 0 };
+    let soundEnabled = true;
+
+    // WebAudio setup
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    const audioCtx = new AudioCtx();
+
+    function playTone(freq, duration = 0.12, type = 'sine', gain = 0.06) {
+      if (!soundEnabled) return;
+      const o = audioCtx.createOscillator();
+      const g = audioCtx.createGain();
+      o.type = type;
+      o.frequency.value = freq;
+      g.gain.value = gain;
+      o.connect(g);
+      g.connect(audioCtx.destination);
+      o.start();
+      g.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + duration);
+      setTimeout(() => { try { o.stop(); } catch (e) {} }, duration * 1000 + 20);
+    }
+
+    function playClick(isPlayer=true){
+      // player click higher pitch, computer lower
+      playTone(isPlayer?880:640, 0.08, 'square', 0.06);
+    }
+    function playWin(){
+      // simple ascending arpeggio
+      playTone(880,0.12,'sine',0.09);
+      setTimeout(()=>playTone(1100,0.12,'sine',0.09),120);
+      setTimeout(()=>playTone(1320,0.18,'sine',0.12),260);
+    }
+    function playLose(){
+      // descending minor
+      playTone(660,0.12,'sawtooth',0.08);
+      setTimeout(()=>playTone(540,0.12,'sawtooth',0.08),120);
+      setTimeout(()=>playTone(440,0.18,'sawtooth',0.1),260);
+    }
+    function playTie(){
+      playTone(720,0.08,'triangle',0.07);
+      setTimeout(()=>playTone(760,0.08,'triangle',0.07),110);
+    }
+
+    // Utilities
+    const winPatterns = [
+      [0,1,2],[3,4,5],[6,7,8],
+      [0,3,6],[1,4,7],[2,5,8],
+      [0,4,8],[2,4,6]
+    ];
+
+    function getWinnerInfo(b){
+      for(const p of winPatterns){
+        const [a,b1,c] = p;
+        if (b[a] && b[a] === b[b1] && b[a] === b[c]) return { winner: b[a], line: p };
+      }
+      if (b.every(cell=>cell)) return { winner: 'Tie' };
+      return { winner: null };
+    }
+
+    function render(){
+      boardEl.innerHTML = '';
+      board.forEach((val, idx) =>{
+        const cell = document.createElement('div');
+        cell.className = 'cell ' + (val? val.toLowerCase(): '');
+        cell.textContent = val;
+        cell.addEventListener('click', ()=> userClick(idx));
+        boardEl.appendChild(cell);
+      });
+
+      const info = getWinnerInfo(board);
+      if(info.winner){
+        gameOver = true;
+        if(info.winner === 'Tie'){
+          messageEl.innerHTML = '🤝 It\'s a Tie!';
+          playTie();
+          scores.Tie++;
+        } else if(info.winner === 'X'){
+          messageEl.innerHTML = '🎉 You Win!';
+          highlightLine(info.line);
+          playWin();
+          scores.X++;
+        } else {
+          messageEl.innerHTML = '💻 Computer Wins';
+          highlightLine(info.line);
+          playLose();
+          scores.O++;
+        }
+        updateScore();
+      } else {
+        gameOver = false;
+        messageEl.innerHTML = playerTurn? 'Your turn — you are <strong>X</strong>' : "Computer's turn";
+      }
+    }
+
+    function highlightLine(line){
+      // add .win to the 3 winning cells
+      setTimeout(()=>{
+        const cells = boardEl.querySelectorAll('.cell');
+        line.forEach(i=>{
+          if(cells[i]) cells[i].classList.add('win');
+        });
+      }, 50);
+    }
+
+    function userClick(i){
+      if (gameOver || !playerTurn || board[i]) return;
+      board[i] = 'X';
+      playClick(true);
+      playerTurn = false;
+      render();
+      if (!gameOver) setTimeout(()=> computerMove(), 350);
+    }
+
+    // Minimax (returns best move index inside { index, score })
+    function minimax(newBoard, isMaximizing){
+      const info = getWinnerInfo(newBoard);
+      if(info.winner === 'O') return { score: 10 };
+      if(info.winner === 'X') return { score: -10 };
+      if(info.winner === 'Tie') return { score: 0 };
+
+      const avail = newBoard.map((c,i)=> c===''? i: null).filter(x=> x!==null);
+      const moves = [];
+
+      for(const idx of avail){
+        const move = {};
+        move.index = idx;
+        newBoard[idx] = isMaximizing? 'O':'X';
+        const result = minimax(newBoard, !isMaximizing);
+        move.score = result.score;
+        newBoard[idx] = '';
+        moves.push(move);
+      }
+
+      let bestMove = null;
+      if(isMaximizing){
+        let bestScore = -Infinity;
+        for(const m of moves) if(m.score > bestScore){ bestScore = m.score; bestMove = m; }
+      } else {
+        let bestScore = Infinity;
+        for(const m of moves) if(m.score < bestScore){ bestScore = m.score; bestMove = m; }
+      }
+      return bestMove;
+    }
+
+    function computerMove(){
+      // If center empty, take it
+      if(board[4] === ''){
+        board[4] = 'O';
+        playClick(false);
+        playerTurn = true;
+        render();
+        return;
+      }
+
+      const best = minimax(board.slice(), true);
+      let idx = best && typeof best.index === 'number' ? best.index : null;
+      if(idx === null){
+        // fallback to random
+        const avail = board.map((c,i)=> c===''? i: null).filter(x=> x!==null);
+        idx = avail[Math.floor(Math.random()*avail.length)];
+      }
+      board[idx] = 'O';
+      playClick(false);
+      playerTurn = true;
+      render();
+    }
+
+    function updateScore(){ scoreEl.textContent = `You: ${scores.X} · Computer: ${scores.O} · Ties: ${scores.Tie}` }
+
+    // Controls
+    resetBtn.addEventListener('click', ()=>{
+      board = Array(9).fill('');
+      gameOver = false; playerTurn = true;
+      messageEl.innerHTML = 'Your turn — you are <strong>X</strong>';
+      // remove win classes
+      requestAnimationFrame(()=>{
+        boardEl.querySelectorAll('.cell').forEach(c=> c && c.classList && c.classList.remove('win'));
+      });
+      render();
+    });
+
+    firstBtn.addEventListener('click', ()=>{
+      board = Array(9).fill(''); gameOver=false; playerTurn=false; messageEl.textContent = "Computer's turn";
+      // small delay then computer plays
+      setTimeout(()=>{ computerMove(); }, 450);
+    });
+
+    soundOnBtn.addEventListener('click', ()=>{ soundEnabled = true; soundOnBtn.classList.add('primary'); soundOffBtn.classList.remove('primary'); });
+    soundOffBtn.addEventListener('click', ()=>{ soundEnabled = false; soundOffBtn.classList.add('primary'); soundOnBtn.classList.remove('primary'); });
+
+    // init: make soundOn primary
+    soundOnBtn.classList.add('primary');
+
+    // Start
+    render();
+
+  </script>
+</body>
+</html>
